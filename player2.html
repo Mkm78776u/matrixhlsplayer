@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PW maTrix HLS Player</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #ff0000;
+      --secondary: #282828;
+      --control-bg: rgba(33, 33, 33, 0.9);
+      --text-color: #ffffff;
+    }
+
+    body {
+      margin: 0;
+      background: #000;
+      font-family: 'Poppins', Arial, sans-serif;
+      color: var(--text-color);
+    }
+
+    .player-container {
+      position: relative;
+      max-width: 1000px;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    #videoPlayer {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
+
+    .controls-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--control-bg);
+      padding: 10px;
+      transform: translateY(100%);
+      transition: transform 0.2s ease;
+    }
+
+    .controls-container.show {
+      transform: translateY(0);
+    }
+
+    .progress-container {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      right: -5px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .progress-container:hover .progress-bar::after {
+      opacity: 1;
+    }
+
+    .main-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .left-controls, .right-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .control-btn {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .time-display {
+      font-size: 14px;
+    }
+
+    .volume-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .volume-slider {
+      width: 80px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .volume-container:hover .volume-slider {
+      opacity: 1;
+    }
+
+    .quality-menu {
+      position: relative;
+    }
+
+    .quality-options {
+      position: absolute;
+      bottom: 40px;
+      right: 0;
+      background: var(--control-bg);
+      border-radius: 4px;
+      padding: 10px;
+      display: none;
+      min-width: 120px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      overflow-y: auto;
+    }
+
+    .quality-options.show {
+      display: block;
+    }
+
+    .quality-option {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .quality-option:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .quality-option.active {
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .quality-option .checkmark {
+      display: none;
+    }
+
+    .quality-option.active .checkmark {
+      display: inline;
+    }
+
+    .loading-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    .site-watermark {
+      position: fixed;
+      bottom: 10px;
+      right: 15px;
+      font-size: 15px;
+      font-family: 'Poppins', sans-serif;
+      color: rgba(255, 255, 255, 0.75);
+      background: rgba(40, 40, 40, 0.5);
+      padding: 6px 14px;
+      border-radius: 10px;
+      pointer-events: none;
+      z-index: 9999;
+      user-select: none;
+      backdrop-filter: blur(5px);
+    }
+
+    @media (orientation: portrait) {
+      .player-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90vw;
+        height: calc(90vw * 4 / 7);
+        max-width: 95vw;
+        max-height: 90vh;
+      }
+    }
+
+    #videoPlayer {
+      border: 1px solid #ffffff;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+        .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      background: linear-gradient(90deg, #141e30, #000);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 25px;
+      z-index: 1000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="player-container">
+    <div class="loading-spinner"></div>
+    <video id="videoPlayer"></video>
+
+    <div class="controls-container">
+      <div class="progress-container">
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="main-controls">
+        <div class="left-controls">
+          <button class="control-btn play-btn">▶</button>
+          <button class="control-btn mute-btn">📢</button>
+          <div class="volume-container">
+            <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1">
+          </div>
+          <div class="time-display">00:00 / 00:00</div>
+        </div>
+
+        <div class="right-controls">
+          <div class="quality-menu">
+            <button class="control-btn quality-btn">Quality</button>
+            <div class="quality-options">
+              <div class="quality-option active" data-quality="auto">
+                <span>Auto</span>
+                <span class="checkmark">✓</span>
+              </div>
+            </div>
+          </div>
+          <button class="control-btn fullscreen-btn">⛶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="site-watermark"> <p1>made by mithilesh kmwt</p1>
+  <br>
+  <p2>contact: mithileshkmwt@gmail.com</p2></div>
+  <div class="top-bar">
+    <div class="logo">PW MATRIX HLS PLAYER</div>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const videoURL = urlParams.get('videoURL');
+      if (!videoURL) {
+        alert('Missing videoURL parameter! Example: ?videoURL=ENCODED_STREAM_URL');
+        return;
+      }
+
+      const decodedURL = decodeURIComponent(videoURL);
+      const videoPlayer = document.getElementById('videoPlayer');
+      const spinner = document.querySelector('.loading-spinner');
+      const playBtn = document.querySelector('.play-btn');
+      const muteBtn = document.querySelector('.mute-btn');
+      const volumeSlider = document.querySelector('.volume-slider');
+      const progressBar = document.querySelector('.progress-bar');
+      const progressContainer = document.querySelector('.progress-container');
+      const timeDisplay = document.querySelector('.time-display');
+      const qualityBtn = document.querySelector('.quality-btn');
+      const qualityOptions = document.querySelector('.quality-options');
+      const fullscreenBtn = document.querySelector('.fullscreen-btn');
+      const playerContainer = document.querySelector('.player-container');
+      const controlsContainer = document.querySelector('.controls-container');
+
+      let hls;
+      let qualityLevels = [];
+      let savedQuality = localStorage.getItem('hlsQualityPreference') || 'auto';
+      let controlsVisible = false;
+
+      spinner.style.display = 'block';
+
+      function initializePlayer() {
+        if (Hls.isSupported()) {
+          hls = new Hls({ enableWorker: true, startLevel: getSavedQualityLevel() });
+          hls.loadSource(decodedURL);
+          hls.attachMedia(videoPlayer);
+          hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+            spinner.style.display = 'none';
+            qualityLevels = data.levels;
+            populateQualityOptions();
+            setInitialQuality();
+          });
+        } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+          spinner.style.display = 'none';
+          videoPlayer.src = decodedURL;
+        } else {
+          alert('This browser does not support HLS streaming');
+        }
+      }
+
+      function getSavedQualityLevel() {
+        return savedQuality === 'auto' ? -1 : parseInt(savedQuality) || -1;
+      }
+
+      function populateQualityOptions() {
+        while (qualityOptions.children.length > 1) {
+          qualityOptions.removeChild(qualityOptions.lastChild);
+        }
+        qualityLevels.forEach((level, index) => {
+          const option = document.createElement('div');
+          option.className = 'quality-option';
+          option.dataset.quality = index;
+          option.innerHTML = `<span>${level.height}p</span><span class="checkmark">✓</span>`;
+          if (index.toString() === savedQuality) option.classList.add('active');
+          option.addEventListener('click', function() {
+            setQualityLevel(this.dataset.quality);
+          });
+          qualityOptions.appendChild(option);
+        });
+      }
+
+      function setInitialQuality() {
+        if (hls) hls.currentLevel = getSavedQualityLevel();
+      }
+
+      function setQualityLevel(level) {
+        document.querySelectorAll('.quality-option').forEach(opt => opt.classList.remove('active'));
+        event.target.closest('.quality-option').classList.add('active');
+        savedQuality = level;
+        localStorage.setItem('hlsQualityPreference', level);
+        if (hls) hls.currentLevel = level === 'auto' ? -1 : parseInt(level);
+        qualityOptions.classList.remove('show');
+      }
+
+      playBtn.addEventListener('click', function() {
+        if (videoPlayer.paused) {
+          videoPlayer.play();
+          this.textContent = '❚❚';
+        } else {
+          videoPlayer.pause();
+          this.textContent = '▶';
+        }
+      });
+
+      muteBtn.addEventListener('click', function() {
+        videoPlayer.muted = !videoPlayer.muted;
+        this.textContent = videoPlayer.muted ? '🔇' : '📢';
+      });
+
+      volumeSlider.addEventListener('input', function() {
+        videoPlayer.volume = this.value;
+        videoPlayer.muted = this.value == 0;
+        muteBtn.textContent = this.value == 0 ? '🔇' : '📢';
+      });
+
+      videoPlayer.addEventListener('timeupdate', function() {
+        const percent = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+        progressBar.style.width = `${percent}%`;
+        updateTimeDisplay(videoPlayer.currentTime, videoPlayer.duration);
+      });
+
+      progressContainer.addEventListener('click', function(e) {
+        const percent = e.offsetX / this.offsetWidth;
+        videoPlayer.currentTime = percent * videoPlayer.duration;
+      });
+
+      qualityBtn.addEventListener('click', function() {
+        qualityOptions.classList.toggle('show');
+      });
+
+      fullscreenBtn.addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+          playerContainer.requestFullscreen?.();
+          screen.orientation?.lock?.('landscape').catch(() => {});
+        } else {
+          document.exitFullscreen?.();
+          screen.orientation?.unlock?.();
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        videoPlayer.style.objectFit = document.fullscreenElement ? 'contain' : '';
+      });
+
+      videoPlayer.addEventListener('waiting', () => spinner.style.display = 'block');
+      videoPlayer.addEventListener('playing', () => spinner.style.display = 'none');
+
+      document.addEventListener('click', e => {
+        if (!e.target.closest('.quality-menu')) {
+          qualityOptions.classList.remove('show');
+        }
+      });
+
+      playerContainer.addEventListener('click', function(e) {
+        if (!e.target.closest('.control-btn') && !e.target.closest('.quality-options')) {
+          controlsVisible = !controlsVisible;
+          controlsContainer.classList.toggle('show', controlsVisible);
+        }
+      });
+
+      function updateTimeDisplay(current, duration) {
+        const format = t => `${Math.floor(t / 60)}:${Math.floor(t % 60).toString().padStart(2, '0')}`;
+        timeDisplay.textContent = `${format(current)} / ${format(duration)}`;
+      }
+
+      initializePlayer();
+    });
+  </script>
+</body>
+</html>
